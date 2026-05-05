@@ -426,6 +426,12 @@ static struct {
         uint64_t laptime_store; // helper variable to measure frame duration
         int32_t tick_accum;     // helper variable to decouple ticks from frame rate
     } timing;
+    
+    // pause state
+    struct {
+        bool paused;
+        bool requested;  // to prevent frame-skipping glitches
+    } pause;
 
     // intro state
     struct {
@@ -809,6 +815,12 @@ static void input(const sapp_event* ev) {
                     break;
                 default:
                     state.input.anykey = btn_down;
+                    break;
+                case SAPP_KEYCODE_P:
+                    if (btn_down) {
+                        state.pause.paused = !state.pause.paused;
+                        state.pause.requested = true;
+                    }
                     break;
             }
         }
@@ -1447,6 +1459,10 @@ static void game_init(void) {
     input_enable();
     game_disable_timers();
     state.game.round = DBG_START_ROUND;
+
+    state.pause.paused = false;
+    state.pause.requested = false;
+    
     state.game.freeze = FREEZETYPE_PRELUDE;
     state.game.num_lives = NUM_LIVES;
     state.game.global_dot_counter_active = false;
@@ -1498,6 +1514,10 @@ static void game_round_init(void) {
     game_disable_timers();
 
     vid_color_text(i2(11, 20), 0x9, "READY!");
+
+    // Clear any lingering pause text
+    vid_color_text(i2(11,18), 0x10, "      ");
+    vid_color_text(i2(9,20), 0x10, "                ");
 
     // the force-house timer forces ghosts out of the house if Pacman isn't
     // eating dots for a while
@@ -2214,6 +2234,15 @@ static void game_update_actors(void) {
 
 // the central game tick function, called at 60 Hz
 static void game_tick(void) {
+
+    // Handle pause state - skip game logic if paused
+    if (state.pause.paused) {
+        // Draw pause indicator on screen
+        vid_color_text(i2(11,18), 0x0F, "PAUSED");
+        vid_color_text(i2(9,20), 0x0F, "PRESS P TO RESUME");
+        return;  // Skip all game logic when paused
+    }
+    
     // debug: skip prelude
     #if DBG_SKIP_PRELUDE
         const int prelude_ticks_per_sec = 1;
