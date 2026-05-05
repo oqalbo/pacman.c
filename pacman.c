@@ -768,6 +768,7 @@ static void frame(void) {
         }
         if (now(state.game.started)) {
             state.gamestate = GAMESTATE_GAME;
+            state.pause.paused = false;  // <-- ADD THIS LINE
         }
 
         // call the top-level game state update function
@@ -1469,6 +1470,7 @@ static void game_init(void) {
     state.game.global_dot_counter = 0;
     state.game.num_dots_eaten = 0;
     state.game.score = 0;
+    state.pause.paused = false;  // <-- ADD THIS LINE
 
     // draw the playfield and PLAYER ONE READY! message
     vid_clear(TILE_SPACE, COLOR_DOT);
@@ -2235,12 +2237,12 @@ static void game_update_actors(void) {
 // the central game tick function, called at 60 Hz
 static void game_tick(void) {
 
-    // Handle pause state - skip game logic if paused
+    // Handle pause - skip game logic if paused
     if (state.pause.paused) {
-        // Draw pause indicator on screen
-        vid_color_text(i2(11,18), 0x0F, "PAUSED");
-        vid_color_text(i2(9,20), 0x0F, "PRESS P TO RESUME");
-        return;  // Skip all game logic when paused
+        // Draw pause indicator
+        vid_color_text(i2(11, 18), 0x0F, "PAUSED");
+        vid_color_text(i2(9, 20), 0x0F, "PRESS P TO RESUME");
+        return;  // Skip all game logic
     }
     
     // debug: skip prelude
@@ -2421,6 +2423,7 @@ static void intro_tick(void) {
     // if a key is pressed, advance to game state
     if (state.input.anykey) {
         input_disable();
+        state.pause.paused = false;  // <-- ADD THIS LINE
         start(&state.gfx.fadeout);
         start_after(&state.game.started, FADE_TICKS);
     }
