@@ -821,6 +821,20 @@ static void input(const sapp_event* ev) {
                     if (btn_down) {
                         state.pause.paused = !state.pause.paused;
                         state.pause.requested = true;
+                        // If we are unpausing, erase the pause text from the screen
+                        if (!state.pause.paused) {
+                            vid_color_text(i2(11, 18), 0x10, "      ");
+                            vid_color_text(i2(9, 20), 0x10, "                ");
+                        }
+                    }
+                    break;
+                    break;
+                 case SAPP_KEYCODE_U:
+                    if (btn_down) {
+                        // Increase lives, but cap at 9 (more than that looks weird)
+                        if (state.game.num_lives < 9) {
+                            state.game.num_lives++;
+                        }
                     }
                     break;
             }
@@ -1463,6 +1477,9 @@ static void game_init(void) {
 
     state.pause.paused = false;
     state.pause.requested = false;
+    // Clear any pause text that might have been left over from intro
+    vid_color_text(i2(11, 18), 0x10, "      ");
+    vid_color_text(i2(9, 20), 0x10, "                ");
     
     state.game.freeze = FREEZETYPE_PRELUDE;
     state.game.num_lives = NUM_LIVES;
