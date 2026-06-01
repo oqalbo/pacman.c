@@ -1,0 +1,63 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [ main, master ]
+    tags:
+      - 'v*'  # Trigger on version tags like v1.0, v2.1, etc.
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Configure CMake
+      run: |
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release
+    
+    - name: Build
+      run: |
+        cd build
+        cmake --build . --config Release
+    
+    - name: Verify executable exists
+      run: |
+        if (Test-Path "build\Release\pacman.exe") {
+          Write-Host "✅ Executable found at build\Release\pacman.exe"
+          dir build\Release\pacman.exe
+        } elseif (Test-Path "build\pacman.exe") {
+          Write-Host "✅ Executable found at build\pacman.exe"
+          dir build\pacman.exe
+        } else {
+          Write-Host "❌ Executable not found!"
+          exit 1
+        }
+    
+    - name: Upload artifact (for branch builds)
+      uses: actions/upload-artifact@v4
+      with:
+        name: pacman-windows
+        path: |
+          build/Release/pacman.exe
+          build/pacman.exe
+        if-no-files-found: error
+    
+    - name: Create Release (on tag push)
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          build/Release/pacman.exe
+          build/pacman.exe
+        generate_release_notes: true
+        name: Release ${{ github.ref_name }}
+        tag_name: ${{ github.ref_name }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
