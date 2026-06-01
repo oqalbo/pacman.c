@@ -141,7 +141,9 @@
 #include <stdlib.h> // abs()
 
 // config defines and global constants
-#define AUDIO_VOLUME (0.5f)
+static float master_volume = 0.5f;
+static bool game_paused = false;
+static bool infinite_lives = true;
 #define DBG_SKIP_INTRO      (0)     // set to (1) to skip intro
 #define DBG_SKIP_PRELUDE    (0)     // set to (1) to skip game prelude
 #define DBG_START_ROUND     (0)     // set to any starting round <=255
@@ -754,7 +756,9 @@ static void frame(void) {
         state.timing.tick++;
 
         // call per-tick sound function (updates sound 'registers' with current sound effect values)
-        snd_tick();
+        if (!game_paused) {
+            snd_tick();
+        }
 
         // check for game state change
         if (now(state.intro.started)) {
@@ -765,13 +769,15 @@ static void frame(void) {
         }
 
         // call the top-level game state update function
-        switch (state.gamestate) {
-            case GAMESTATE_INTRO:
-                intro_tick();
-                break;
-            case GAMESTATE_GAME:
-                game_tick();
-                break;
+        if (!game_paused) {
+            switch (state.gamestate) {
+                case GAMESTATE_INTRO:
+                    intro_tick();
+                    break;
+                case GAMESTATE_GAME:
+                    game_tick();
+                    break;
+            }
         }
     }
     gfx_draw();
@@ -782,6 +788,27 @@ static void input(const sapp_event* ev) {
     if (state.input.enabled) {
         if ((ev->type == SAPP_EVENTTYPE_KEY_DOWN) || (ev->type == SAPP_EVENTTYPE_KEY_UP)) {
             bool btn_down = ev->type == SAPP_EVENTTYPE_KEY_DOWN;
+            if (btn_down && ev->key_code == SAPP_KEYCODE_F1) {
+                infinite_lives = !infinite_lives;
+            }
+                if (btn_down && ev->key_code == SAPP_KEYCODE_P) {
+                    game_paused = !game_paused;
+                }
+                if (btn_down) {
+                    if (ev->key_code == SAPP_KEYCODE_MINUS) {
+                        master_volume -= 0.1f;
+                        if (master_volume < 0.0f) {
+                            master_volume = 0.0f;
+                        }
+                    }
+                
+                    if (ev->key_code == SAPP_KEYCODE_EQUAL) {
+                        master_volume += 0.1f;
+                        if (master_volume > 1.0f) {
+                            master_volume = 1.0f;
+                        }
+                    }
+                }
             switch (ev->key_code) {
                 case SAPP_KEYCODE_UP:
                 case SAPP_KEYCODE_W:
@@ -1487,7 +1514,9 @@ static void game_round_init(void) {
             state.game.global_dot_counter_active = true;
             state.game.global_dot_counter = 0;
         }
-        state.game.num_lives--;
+        if (!infinite_lives) {
+            state.game.num_lives--;
+        }
     }
     assert(state.game.num_lives >= 0);
 
@@ -3161,7 +3190,7 @@ static void snd_sample_tick(void) {
             voice->sample_acc = voice->sample_div = 0.0f;
         }
     }
-    state.audio.sample_buffer[state.audio.num_samples++] = sm * 0.333333f * AUDIO_VOLUME;
+    state.audio.sample_buffer[state.audio.num_samples++] = sm * 0.333333f * master_volume;
     if (state.audio.num_samples == NUM_SAMPLES) {
         saudio_push(state.audio.sample_buffer, state.audio.num_samples);
         state.audio.num_samples = 0;
