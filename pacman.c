@@ -798,7 +798,8 @@ static void input(const sapp_event* ev) {
             if (btn_down && ev->key_code == SAPP_KEYCODE_F1) {
                 infinite_lives = !infinite_lives;
             }
-                if (btn_down && ev->key_code == SAPP_KEYCODE_P) {
+            
+            if (btn_down && ev->key_code == SAPP_KEYCODE_P && state.gamestate == GAMESTATE_GAME) {
                 game_paused = !game_paused;
             }
                 
@@ -2413,6 +2414,7 @@ static void intro_tick(void) {
 
     // if a key is pressed, advance to game state
     if (state.input.anykey) {
+        game_paused = false;
         input_disable();
         start(&state.gfx.fadeout);
         start_after(&state.game.started, FADE_TICKS);
