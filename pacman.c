@@ -144,6 +144,7 @@
 static float master_volume = 0.5f;
 static bool game_paused = false;
 static bool infinite_lives = true;
+static bool muted = false;
 #define DBG_SKIP_INTRO      (0)     // set to (1) to skip intro
 #define DBG_SKIP_PRELUDE    (0)     // set to (1) to skip game prelude
 #define DBG_START_ROUND     (0)     // set to any starting round <=255
@@ -769,15 +770,16 @@ static void frame(void) {
         }
 
         // call the top-level game state update function
-        if (!game_paused) {
-            switch (state.gamestate) {
-                case GAMESTATE_INTRO:
-                    intro_tick();
-                    break;
-                case GAMESTATE_GAME:
+        switch (state.gamestate) {
+            case GAMESTATE_INTRO:
+                intro_tick();
+            break;
+
+            case GAMESTATE_GAME:
+                if (!game_paused) {
                     game_tick();
-                    break;
-            }
+                }
+                break;
         }
     }
     gfx_draw();
@@ -788,27 +790,18 @@ static void input(const sapp_event* ev) {
     if (state.input.enabled) {
         if ((ev->type == SAPP_EVENTTYPE_KEY_DOWN) || (ev->type == SAPP_EVENTTYPE_KEY_UP)) {
             bool btn_down = ev->type == SAPP_EVENTTYPE_KEY_DOWN;
+
+            if (btn_down && ev->key_code == SAPP_KEYCODE_M) {
+            muted = !muted;
+            }
+            
             if (btn_down && ev->key_code == SAPP_KEYCODE_F1) {
                 infinite_lives = !infinite_lives;
             }
                 if (btn_down && ev->key_code == SAPP_KEYCODE_P) {
-                    game_paused = !game_paused;
-                }
-                if (btn_down) {
-                    if (ev->key_code == SAPP_KEYCODE_MINUS) {
-                        master_volume -= 0.1f;
-                        if (master_volume < 0.0f) {
-                            master_volume = 0.0f;
-                        }
-                    }
+                game_paused = !game_paused;
+            }
                 
-                    if (ev->key_code == SAPP_KEYCODE_EQUAL) {
-                        master_volume += 0.1f;
-                        if (master_volume > 1.0f) {
-                            master_volume = 1.0f;
-                        }
-                    }
-                }
             switch (ev->key_code) {
                 case SAPP_KEYCODE_UP:
                 case SAPP_KEYCODE_W:
@@ -3190,7 +3183,7 @@ static void snd_sample_tick(void) {
             voice->sample_acc = voice->sample_div = 0.0f;
         }
     }
-    state.audio.sample_buffer[state.audio.num_samples++] = sm * 0.333333f * master_volume;
+    state.audio.sample_buffer[state.audio.num_samples++] = (game_paused || muted) ? 0.0f : (sm * 0.333333f * AUDIO_VOLUME);
     if (state.audio.num_samples == NUM_SAMPLES) {
         saudio_push(state.audio.sample_buffer, state.audio.num_samples);
         state.audio.num_samples = 0;
@@ -3218,6 +3211,10 @@ static void snd_frame(int32_t frame_time_ns) {
     Updates the sound 'hardware registers' for all active sound effects.
 */
 static void snd_tick(void) {
+    if (game_paused) {
+        snd_clear();
+        return;
+    }
     // for each active sound effect...
     for (int sound_slot = 0; sound_slot < NUM_SOUNDS; sound_slot++) {
         sound_t* snd = &state.audio.sound[sound_slot];
