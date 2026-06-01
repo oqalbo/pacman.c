@@ -3183,7 +3183,7 @@ static void snd_sample_tick(void) {
             voice->sample_acc = voice->sample_div = 0.0f;
         }
     }
-    state.audio.sample_buffer[state.audio.num_samples++] = (game_paused || muted) ? 0.0f : (sm * 0.333333f * AUDIO_VOLUME);
+    state.audio.sample_buffer[state.audio.num_samples++] = (game_paused || muted) ? 0.0f : (sm * 0.333333f);
     if (state.audio.num_samples == NUM_SAMPLES) {
         saudio_push(state.audio.sample_buffer, state.audio.num_samples);
         state.audio.num_samples = 0;
