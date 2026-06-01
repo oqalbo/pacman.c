@@ -6,6 +6,6 @@ Mute/Unmute with M Key
 <br>
 Pause with P Key
 <br>
-Infinite Lives with F1 key (enabled by default)
+Infinite Lives with F1 Key (enabled by default)
 <br><br>
 Changes were made by ChatGPT
